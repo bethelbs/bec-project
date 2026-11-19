@@ -14,18 +14,6 @@ All inputs are processed files from ENCODE on the GRCh38 assembly: BMEC ChIP-seq
 
 The expected outputs are (1) a catalogue of active promoters and enhancers, (2) a table of loop-supported enhancer–promoter pairs with their target genes, (3) a ranked table of candidate TFs from motif enrichment in loop-supported enhancers.
 
-## Reproduce the results
-
-You need [Pixi](https://pixi.prefix.dev/latest/) and an internet connection.
-Then, from this folder:
-
-```bash
-pixi install          # builds the exact environment recorded in pixi.lock
-pixi run reproduce    # downloads the raw data and rebuilds every result
-```
-
-`pixi run reproduce` must work on a fresh clone of this repository. A GitHub
-Action (`.github/workflows/reproduce.yml`) checks that on every push.
 
 ## What is where
 
@@ -44,12 +32,12 @@ Action (`.github/workflows/reproduce.yml`) checks that on every push.
 | `envs/` | Conda `environment.yml` exports, for people without Pixi | Generated from `pixi.toml`. |
 | `containers/` | Dockerfile and Apptainer recipe | Committed. |
 
-Each folder has its own `README.md` with more detail.
 
 ## Data
 
-Describe here where the raw data comes from (repository, accession or DOI,
-license) and how it is downloaded. List checksums in `metadata/`.
+All inputs are processed files from ENCODE on the GRCh38 assembly: BMEC ChIP-seq peaks for H3K27ac (ENCSR111QCU), H3K4me3 (ENCSR000DTC), H3K27me3 (ENCSR032CAS) and CTCF (ENCSR000DTA); H3K4me1 from HUVEC (ENCSR000AKL), used as a labelled proxy because no BMEC H3K4me1 data exist; Hi-C loops, domains and compartments from ENCSR507AHE; plus a GENCODE gene annotation, the ENCODE blacklist and the GRCh38 reference sequence. Together they are under about 1 GB, most of it the reference sequence. ENCODE data are freely available for reuse with citation under the ENCODE data use policy.
+They are downloaded by `scripts/download_data.py` and are not stored in this repository. The expected outputs are (1) a catalogue of active promoters and enhancers, (2) a table of loop-supported enhancer–promoter pairs with their target genes, and (3) a ranked table of candidate TFs from motif enrichment in loop-supported enhancers.
+ List checksums in `metadata/`.
 
 ## How to cite
 
