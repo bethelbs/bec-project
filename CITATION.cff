@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite it as below."
+title: "Regulatory landscape of brain endothelial cells"
+abstract: "Element-first catalogue of BMEC promoters and enhancers, linked to genes by Hi-C loops, with candidate TF motifs"
+type: software
+authors:
+  - given-names: "Bethel"
+    family-names: "Sisay"
+    email: "132695873+bethelbs@users.noreply.github.com"
+repository-code: "https://github.com/bethelbs/bec-project"
+license: MIT
+version: 0.1.0
+date-released: "2026-11-18"
