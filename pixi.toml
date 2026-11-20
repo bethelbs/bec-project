@@ -21,8 +21,7 @@ pyyaml = ">=6.0.3,<7"
 
 [tasks]
 check = { cmd = "python --version && quarto --version", description = "Check that the tools work" }
-# `reproduce` must rebuild every result from the raw data with one command.
-# The lessons replace this placeholder with real steps.
+# `reproduce` rebuilds every result from the raw data: download -> Snakemake workflow.
 download = { cmd = "python scripts/download_data.py", description = "Download the raw data and verify checksums" }
 verify-data = { cmd = "python scripts/download_data.py --verify-only", description = "Check raw data without downloading" }
 reproduce = [{ task = "run-snakemake" }]
