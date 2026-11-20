@@ -25,7 +25,7 @@ check = { cmd = "python --version && quarto --version", description = "Check tha
 # The lessons replace this placeholder with real steps.
 download = { cmd = "python scripts/download_data.py", description = "Download the raw data and verify checksums" }
 verify-data = { cmd = "python scripts/download_data.py --verify-only", description = "Check raw data without downloading" }
-reproduce = [{ task = "download" }]
+reproduce = [{ task = "run-snakemake" }]
 
 [feature.pipeline]
 platforms = ["linux-64", "osx-arm64", "osx-64"]
@@ -37,6 +37,9 @@ graphviz = "*"
 bedtools = "*"
 homer = "*"
 pybigwig = "*"
+
+[feature.pipeline.tasks]
+run-snakemake = { cmd = "snakemake --cores all", depends-on = ["download"], description = "Run the analysis workflow" }
 
 [environments]
 pipeline = ["pipeline"]
