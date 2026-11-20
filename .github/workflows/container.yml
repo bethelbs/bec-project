@@ -1,0 +1,39 @@
+# Build the container image from pixi.lock and run the whole analysis inside it.
+# Runs when started by hand (Actions tab -> Container -> Run workflow) and on version tags.
+name: Container
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Fresh clone
+        uses: actions/checkout@v7
+
+      - name: Build the image from pixi.lock
+        run: |
+          docker build --platform linux/amd64 -f containers/Dockerfile \
+            --build-arg ENV_NAME=pipeline -t bec-project:ci .
+          docker images bec-project
+
+      - name: Run the analysis inside the container
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+            -v "$PWD":/work -w /work bec-project:ci \
+            bash -c "python scripts/download_data.py && snakemake --cores all && quarto render reports/bec-report.qmd"
+
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-results
+          path: |
+            results/
+            reports/*.html
+          if-no-files-found: ignore
+          retention-days: 7

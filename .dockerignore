@@ -1,10 +1,9 @@
-# Keep the Docker build context small: the image needs only pixi.toml and
-# pixi.lock. Never send data, results or local environments to Docker.
+# Keep the build context small: only pixi.toml and pixi.lock are needed.
 .pixi/
 .git/
 data/
 results/
-work/
 .snakemake/
-.nextflow/
-*.sif
+.quarto/
+reports/*.html
+reports/*_files/
