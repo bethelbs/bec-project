@@ -1,0 +1,271 @@
+# Workflow: regulatory elements of brain microvascular endothelial cells (BMEC).
+#
+# Raw inputs come from scripts/download_data.py (pixi task `download`); this
+# workflow turns them into the tables the report reads. All settings live in
+# config/config.yaml; the scripts receive them as command-line arguments, so a
+# changed setting reruns only the rules that use it.
+#
+# Run from the project root:
+#   pixi run -e pipeline snakemake -n          # dry run: show the plan
+#   pixi run -e pipeline snakemake --cores all # run
+
+import csv
+import os
+
+
+configfile: "config/config.yaml"
+
+
+# ---------------------------------------------------------------------------
+# Sample sheet and shared settings
+# ---------------------------------------------------------------------------
+
+with open(config["samples"]) as fh:
+    SAMPLES = {row["name"]: row for row in csv.DictReader(fh, delimiter="\t")}
+
+CHIP = sorted(name for name, row in SAMPLES.items() if row["assay"] == "ChIP-seq")
+REF = config["reference"]
+CHROMS = " ".join(config["chromosomes"])
+TSS_WINDOW = config["promoters"]["tss_window"]
+
+PEAKS = "data/processed/peaks"
+ELEMENTS = "data/processed/elements"
+TABLES = "results/tables"
+LOGS = "results/logs"
+
+
+def raw(name):
+    """Path of a raw input file, as given in the sample sheet."""
+    return SAMPLES[name]["path"]
+
+
+def flag(option, on):
+    """A command-line switch that is present only when the config value is true."""
+    return option if on else ""
+
+
+wildcard_constraints:
+    sample="|".join(CHIP),
+
+
+# ---------------------------------------------------------------------------
+# Target
+# ---------------------------------------------------------------------------
+
+
+rule all:
+    default_target: True
+    input:
+        f"{TABLES}/summary.tsv",
+        f"{TABLES}/peak_qc.tsv",
+        f"{TABLES}/candidate_tfs.tsv",
+        f"{TABLES}/target_genes.tsv",
+        f"{TABLES}/element_context.tsv",
+        f"{TABLES}/ep_pairs.tsv",
+
+
+# ---------------------------------------------------------------------------
+# Prepare inputs
+# ---------------------------------------------------------------------------
+
+
+rule prepare_tss:
+    input:
+        gtf=REF["annotation"],
+    output:
+        "data/processed/annotation/tss.bed",
+    log:
+        f"{LOGS}/prepare_tss.log",
+    params:
+        gene_types=" ".join(config["tss"]["gene_types"]),
+        chroms=CHROMS,
+    shell:
+        "python scripts/prepare_tss.py --gtf {input.gtf} --gene-types {params.gene_types} "
+        "--chromosomes {params.chroms} --out {output} > {log} 2>&1"
+
+
+rule clean_peaks:
+    input:
+        peaks=lambda wc: raw(wc.sample),
+        blacklist=REF["blacklist"],
+    output:
+        f"{PEAKS}/{{sample}}.bed",
+    log:
+        f"{LOGS}/clean_peaks/{{sample}}.log",
+    params:
+        chroms=CHROMS,
+        min_q=config["peaks"]["min_neglog10_q"],
+    shell:
+        "python scripts/clean_peaks.py --peaks {input.peaks} --blacklist {input.blacklist} "
+        "--chromosomes {params.chroms} --min-neglog10-q {params.min_q} --out {output} > {log} 2>&1"
+
+
+# ---------------------------------------------------------------------------
+# Regulatory elements
+# ---------------------------------------------------------------------------
+
+
+rule call_elements:
+    input:
+        h3k27ac=f"{PEAKS}/bmec_h3k27ac_peaks.bed",
+        h3k4me3=f"{PEAKS}/bmec_h3k4me3_peaks.bed",
+        h3k4me1=f"{PEAKS}/huvec_h3k4me1_peaks.bed",
+        tss=rules.prepare_tss.output,
+    output:
+        promoters=f"{ELEMENTS}/promoters.tsv",
+        enhancers=f"{ELEMENTS}/enhancers.tsv",
+    log:
+        f"{LOGS}/call_elements.log",
+    params:
+        window=TSS_WINDOW,
+        exclude=flag("--exclude-h3k4me3", config["enhancers"]["exclude_h3k4me3"]),
+        require=flag("--require-h3k4me1", config["enhancers"]["require_h3k4me1"]),
+    shell:
+        "python scripts/call_elements.py --h3k27ac {input.h3k27ac} --h3k4me3 {input.h3k4me3} "
+        "--h3k4me1 {input.h3k4me1} --tss {input.tss} --tss-window {params.window} "
+        "{params.exclude} {params.require} "
+        "--promoters-out {output.promoters} --enhancers-out {output.enhancers} > {log} 2>&1"
+
+
+# ---------------------------------------------------------------------------
+# Hi-C integration
+# ---------------------------------------------------------------------------
+
+
+rule link_loops:
+    input:
+        loops=raw("bmec_hic_loops"),
+        promoters=rules.call_elements.output.promoters,
+        enhancers=rules.call_elements.output.enhancers,
+    output:
+        pairs=f"{TABLES}/ep_pairs.tsv",
+        enhancers=f"{ELEMENTS}/loop_enhancers.bed",
+    log:
+        f"{LOGS}/link_loops.log",
+    params:
+        chroms=CHROMS,
+        padding=config["loops"]["anchor_padding"],
+    shell:
+        "python scripts/link_loops.py --loops {input.loops} --promoters {input.promoters} "
+        "--enhancers {input.enhancers} --chromosomes {params.chroms} "
+        "--anchor-padding {params.padding} --pairs-out {output.pairs} "
+        "--enhancers-out {output.enhancers} > {log} 2>&1"
+
+
+rule annotate_context:
+    input:
+        promoters=rules.call_elements.output.promoters,
+        enhancers=rules.call_elements.output.enhancers,
+        domains=raw("bmec_hic_domains"),
+        compartments=raw("bmec_hic_compartments"),
+    output:
+        f"{TABLES}/element_context.tsv",
+    log:
+        f"{LOGS}/annotate_context.log",
+    shell:
+        "python scripts/annotate_context.py --promoters {input.promoters} "
+        "--enhancers {input.enhancers} --domains {input.domains} "
+        "--compartments {input.compartments} --out {output} > {log} 2>&1"
+
+
+# ---------------------------------------------------------------------------
+# Motif enrichment and candidates
+# ---------------------------------------------------------------------------
+
+
+rule unzip_genome:
+    input:
+        REF["genome_gz"],
+    output:
+        temp("data/processed/reference/genome.fa"),
+    log:
+        f"{LOGS}/unzip_genome.log",
+    shell:
+        "gzip -dc {input} > {output} 2> {log}"
+
+
+rule make_background:
+    input:
+        targets=rules.link_loops.output.enhancers,
+        chrom_sizes=REF["chrom_sizes"],
+        blacklist=REF["blacklist"],
+    output:
+        "data/processed/motifs/background.bed",
+    log:
+        f"{LOGS}/make_background.log",
+    params:
+        chroms=CHROMS,
+        n=config["motifs"]["background_size"],
+        seed=config["motifs"]["seed"],
+    shell:
+        "python scripts/make_background.py --targets {input.targets} "
+        "--chrom-sizes {input.chrom_sizes} --blacklist {input.blacklist} "
+        "--chromosomes {params.chroms} --n {params.n} --seed {params.seed} "
+        "--out {output} > {log} 2>&1"
+
+
+rule homer_known_motifs:
+    input:
+        targets=rules.link_loops.output.enhancers,
+        background=rules.make_background.output,
+        genome=rules.unzip_genome.output,
+    output:
+        "results/motifs/homer/knownResults.txt",
+    log:
+        f"{LOGS}/homer_known_motifs.log",
+    threads: config["motifs"]["threads"]
+    params:
+        outdir=lambda wildcards, output: os.path.dirname(output[0]),
+        size=config["motifs"]["size"],
+        preparsed="data/processed/homer_preparsed",
+    shell:
+        "findMotifsGenome.pl {input.targets} {input.genome} {params.outdir} "
+        "-size {params.size} -nomotif -bg {input.background} -p {threads} "
+        "-preparsedDir {params.preparsed} > {log} 2>&1"
+
+
+rule rank_candidates:
+    input:
+        known=rules.homer_known_motifs.output,
+        pairs=rules.link_loops.output.pairs,
+    output:
+        tfs=f"{TABLES}/candidate_tfs.tsv",
+        genes=f"{TABLES}/target_genes.tsv",
+    log:
+        f"{LOGS}/rank_candidates.log",
+    params:
+        max_q=config["motifs"]["max_qvalue"],
+        markers=" ".join(config["markers"]),
+    shell:
+        "python scripts/rank_candidates.py --known-results {input.known} --pairs {input.pairs} "
+        "--max-qvalue {params.max_q} --markers {params.markers} "
+        "--tfs-out {output.tfs} --genes-out {output.genes} > {log} 2>&1"
+
+
+# ---------------------------------------------------------------------------
+# Summary tables for the report
+# ---------------------------------------------------------------------------
+
+
+rule summarise:
+    input:
+        peaks=expand(f"{PEAKS}/{{sample}}.bed", sample=CHIP),
+        tss=rules.prepare_tss.output,
+        promoters=rules.call_elements.output.promoters,
+        enhancers=rules.call_elements.output.enhancers,
+        pairs=rules.link_loops.output.pairs,
+        context=rules.annotate_context.output,
+        tfs=rules.rank_candidates.output.tfs,
+    output:
+        qc=f"{TABLES}/peak_qc.tsv",
+        summary=f"{TABLES}/summary.tsv",
+    log:
+        f"{LOGS}/summarise.log",
+    params:
+        peaks=" ".join(f"{s.removesuffix('_peaks')}={PEAKS}/{s}.bed" for s in CHIP),
+        window=TSS_WINDOW,
+    shell:
+        "python scripts/summarise.py --peaks {params.peaks} --tss {input.tss} "
+        "--tss-window {params.window} --promoters {input.promoters} "
+        "--enhancers {input.enhancers} --pairs {input.pairs} --context {input.context} "
+        "--tfs {input.tfs} --peak-qc-out {output.qc} --summary-out {output.summary} > {log} 2>&1"
