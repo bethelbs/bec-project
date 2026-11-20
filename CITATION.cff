@@ -4,10 +4,19 @@ title: "Regulatory landscape of brain endothelial cells"
 abstract: "Element-first catalogue of BMEC promoters and enhancers, linked to genes by Hi-C loops, with candidate TF motifs"
 type: software
 authors:
-  - given-names: "Bethel"
+  - given-names: "Bethel Bahiru"
     family-names: "Sisay"
+    affiliation: "Mohamed bin Zayed University of Artificial Intelligence"
+    orcid: "https://orcid.org/0009-0004-9931-8699"
     email: "132695873+bethelbs@users.noreply.github.com"
 repository-code: "https://github.com/bethelbs/bec-project"
 license: MIT
-version: 0.1.0
-date-released: "2026-11-18"
+version: 1.0.0
+date-released: "2026-11-21"
+keywords:
+  - epigenomics
+  - Hi-C
+  - ChIP-seq
+  - endothelial cells
+  - Snakemake
+
