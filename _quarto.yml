@@ -1,0 +1,10 @@
+project:
+  type: default
+  execute-dir: project   # code runs from the project root, so paths like results/... work
+  render:
+    - reports/*.qmd
+
+execute:
+  echo: false            # show results, not code; set to true to show code
+  warning: false
+

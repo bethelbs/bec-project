@@ -1,0 +1,188 @@
+---
+title: "Regulatory elements of human brain microvascular endothelial cells"
+subtitle: "Promoters and enhancers from ChIP-seq, linked to genes by Hi-C loops, with candidate transcription factors"
+author: "Bethel Sisay"
+date: today
+format:
+  html:
+    toc: true
+    embed-resources: true
+    fig-format: svg
+jupyter: python3
+---
+```{python}
+#| label: setup
+import platform
+from pathlib import Path
+
+import matplotlib
+import matplotlib.ticker
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import yaml
+
+TABLES = Path("results/tables")
+config = yaml.safe_load(open("config/config.yaml"))
+samples = pd.read_csv("metadata/samples.tsv", sep="\t")
+
+summary = pd.read_csv(TABLES / "summary.tsv", sep="\t").set_index("metric")["value"]
+peak_qc = pd.read_csv(TABLES / "peak_qc.tsv", sep="\t")
+pairs = pd.read_csv(TABLES / "ep_pairs.tsv", sep="\t")
+tfs = pd.read_csv(TABLES / "candidate_tfs.tsv", sep="\t", keep_default_na=False)
+genes = pd.read_csv(TABLES / "target_genes.tsv", sep="\t")
+
+
+def n(metric):
+    """A summary count as an integer."""
+    return int(float(summary[metric]))
+
+
+def fmt(x):
+    """Format an integer with thousands separators."""
+    return f"{int(x):,}"
+
+
+def pct(x, digits=0):
+    """Format a fraction as a percentage."""
+    return f"{float(x):.{digits}%}"
+
+
+def show(df):
+    """Display a table without the pandas row numbers."""
+    return df.style.hide(axis="index")
+
+
+# Chart styling: one series colour, quiet axes
+BLUE, INK, MUTED, GRID = "#2a78d6", "#0b0b0b", "#898781", "#e1e0d9"
+plt.rcParams.update({
+    "font.size": 10, "axes.edgecolor": MUTED, "axes.labelcolor": INK,
+    "xtick.color": MUTED, "ytick.color": MUTED, "axes.spines.top": False,
+    "axes.spines.right": False, "axes.grid": True, "grid.color": GRID,
+    "grid.linewidth": 0.6, "axes.axisbelow": True, "svg.fonttype": "none",
+})
+
+window_kb = config["promoters"]["tss_window"] / 1000
+top_tf = tfs.iloc[0]
+families = tfs.loc[tfs["family"] != "", "family"].value_counts()
+ets = tfs[tfs["family"] == "ETS"]
+markers = config["markers"]
+```
+## Question
+
+Which regulatory elements define the identity of brain microvascular endothelial cells (BMEC), and which genes and transcription factors (TFs) do they connect to? This analysis is element-first: it catalogues active promoters and enhancers from histone-mark ChIP-seq, links enhancers to promoters through Hi-C chromatin loops, and searches the loop-supported enhancers for enriched TF motifs. Known blood-brain-barrier marker genes are used only as a check, not as the starting point.
+
+## Data
+
+All inputs are processed files from ENCODE on the GRCh38 assembly (@tbl-data). No H3K4me1 data exist for BMEC, so H3K4me1 from human umbilical vein endothelial cells (HUVEC) is used as a proxy and only flags enhancers; it is not required to call them.
+
+```{python}
+#| label: tbl-data
+#| tbl-cap: "Input data. All files are ENCODE processed files (GRCh38); `is_proxy` marks data from a different cell type."
+show(samples[["name", "assay", "target", "cell_type", "encode_experiment",
+              "encode_file", "output_type", "is_proxy"]])
+```
+
+## Methods
+
+Peaks were restricted to chromosomes 1–22 and X and to regions outside the ENCODE blacklist. **Promoters** are H3K4me3 peaks within `{python} window_kb` kb of a protein-coding gene's transcription start site (TSS). **Enhancers** are H3K27ac peaks farther than `{python} window_kb` kb from every TSS that do not overlap H3K4me3. An enhancer and a promoter are **linked** when they overlap opposite anchors of the same Hi-C loop. Known motifs were tested in the loop-supported enhancers (`{python} config["motifs"]["size"]` bp around each centre) with HOMER against a fixed random genomic background of `{python} fmt(config["motifs"]["background_size"])`+ regions (seed `{python} config["motifs"]["seed"]`); motifs with a Benjamini q-value ≤ `{python} config["motifs"]["max_qvalue"]` are reported. The workflow is in `workflow/Snakefile` and every setting is in `config/config.yaml`.
+
+## Results
+
+### Peak sets
+
+```{python}
+#| label: tbl-peaks
+#| tbl-cap: "Cleaned peak sets. `frac_near_tss` is the share of peaks within the promoter window of a TSS."
+show(peak_qc.rename(columns={"median_width": "median_width_bp"}))
+```
+
+H3K4me3 is the most TSS-centred mark (`{python} pct(peak_qc.set_index("mark").loc["bmec_h3k4me3", "frac_near_tss"])` of its peaks lie near a TSS), as expected for a promoter mark, while H3K36me3, which covers transcribed gene bodies, is the least (`{python} pct(peak_qc.set_index("mark").loc["bmec_h3k36me3", "frac_near_tss"])`).
+
+### Promoters and enhancers
+
+The catalogue contains `{python} fmt(n("n_promoters"))` promoters, of which `{python} fmt(n("n_promoters_h3k27ac"))` (`{python} pct(n("n_promoters_h3k27ac") / n("n_promoters"))`) are also marked by H3K27ac, and `{python} fmt(n("n_enhancers"))` enhancers. `{python} fmt(n("n_enhancers_h3k4me1_proxy"))` enhancers (`{python} pct(n("n_enhancers_h3k4me1_proxy") / n("n_enhancers"))`) overlap the HUVEC H3K4me1 proxy. Most elements lie in the active A compartment: `{python} pct(summary["frac_enhancers_in_A"])` of enhancers and `{python} pct(summary["frac_promoters_in_A"])` of promoters.
+
+
+### Enhancer–promoter links
+
+Hi-C loops link `{python} fmt(n("n_loop_enhancers"))` enhancers (`{python} pct(n("n_loop_enhancers") / n("n_enhancers"), 1)` of all enhancers) to `{python} fmt(n("n_linked_promoters"))` promoters of `{python} fmt(n("n_target_genes"))` genes, in `{python} fmt(n("n_ep_pairs"))` enhancer–promoter pairs. The median distance between a linked enhancer and promoter is `{python} f'{n("median_ep_distance") / 1000:.0f}'` kb (@fig-distance).
+
+```{python}
+#| label: fig-distance
+#| fig-cap: "Distance between linked enhancers and promoters, on a log scale. The dashed line marks the median."
+#| fig-alt: "Histogram of enhancer-promoter distances on a logarithmic axis, from about 40 kilobases to just over 1 megabase. Most pairs lie between 100 kilobases and 1 megabase in a broad, uneven spread with several spikes; a dashed vertical line marks the median distance."
+fig, ax = plt.subplots(figsize=(6.5, 3.2))
+dist_kb = pairs["distance"] / 1000
+bins = np.logspace(np.log10(dist_kb.min()), np.log10(dist_kb.max()), 30)
+ax.hist(dist_kb, bins=bins, color=BLUE, edgecolor="white", linewidth=1)
+ax.axvline(dist_kb.median(), color=INK, linestyle="--", linewidth=1.2)
+ax.text(dist_kb.median() * 1.08, ax.get_ylim()[1] * 0.92,
+        f"median {dist_kb.median():.0f} kb", color=INK)
+ax.set_xscale("log")
+ticks = [50, 100, 200, 500, 1000]
+ax.set_xticks(ticks, [f"{t:,}" for t in ticks])
+ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+ax.set_xlabel("Enhancer–promoter distance (kb)")
+ax.set_ylabel("Pairs")
+ax.grid(axis="x", visible=False)
+plt.tight_layout()
+plt.show()
+```
+
+The genes with the most loop-supported enhancers are listed in @tbl-genes. `{python} "None" if not genes["is_marker"].any() else ", ".join(genes.loc[genes["is_marker"], "gene"])` of the `{python} len(markers)` blood-brain-barrier marker genes (`{python} ", ".join(markers)`) has a loop-supported enhancer, so the loop-based links capture a different set of genes from the classic markers.
+
+```{python}
+#| label: tbl-genes
+#| tbl-cap: "Target genes with the most loop-supported enhancers (top 15)."
+show(genes.head(15).rename(columns={"min_distance": "min_distance_bp"}))
+```
+
+
+### Candidate transcription factors
+
+`{python} len(tfs)` known motifs are enriched in loop-supported enhancers (q ≤ `{python} config["motifs"]["max_qvalue"]`), from `{python} families.size` TF families. The strongest is `{python} top_tf["tf"]` (`{python} top_tf["family"]` family), found in `{python} f'{top_tf["pct_targets"]:.0f}'`% of loop-supported enhancers versus `{python} f'{top_tf["pct_background"]:.0f}'`% of background regions. The most represented families are `{python} ", ".join(f"{fam} ({cnt})" for fam, cnt in families.head(3).items())`. `{python} len(ets)` ETS-family motifs pass the threshold, including `{python} ", ".join(ets["tf"].head(5))`, consistent with the central role of ETS factors in endothelial gene regulation (@fig-tfs).
+
+```{python}
+#| label: fig-tfs
+#| fig-cap: "Top 15 enriched known motifs in loop-supported enhancers, ranked by p-value. Bars show fold enrichment over the background; labels give the TF and its family."
+#| fig-alt: "Horizontal bar chart of the fifteen most significant known motifs, ordered by p-value from top to bottom, with bar length showing fold enrichment over the background. AP-1 (bZIP) factors take the top ranks and ETS factors follow."
+top = tfs.head(15).iloc[::-1]
+fig, ax = plt.subplots(figsize=(6.5, 4.6))
+labels = [f"{t} ({f})" if f else t for t, f in zip(top["tf"], top["family"])]
+ax.barh(labels, top["fold_enrichment"], color=BLUE, height=0.7)
+for y, fold in enumerate(top["fold_enrichment"]):
+    ax.text(fold + 0.03, y, f"{fold:.2f}", va="center", color=MUTED, fontsize=8)
+ax.axvline(1, color=MUTED, linewidth=1)
+ax.set_xlabel("Fold enrichment (targets / background)")
+ax.grid(axis="y", visible=False)
+ax.tick_params(axis="y", colors=INK, length=0)
+plt.tight_layout()
+plt.show()
+```
+
+## Caveats
+
+- **Proxy mark.** The H3K4me1 data come from HUVEC, not BMEC, and are used only to flag enhancers.
+- **Loop depth.** Only `{python} pct(n("n_loop_enhancers") / n("n_enhancers"), 1)` of enhancers sit on a called loop; Hi-C depth limits how many links can be detected, so absence of a link is not evidence of no regulation.
+- **Motifs are not binding.** Enrichment shows which TF motifs are over-represented, not which TFs bind or are expressed in BMEC; no expression data were used.
+
+## Software
+
+```{python}
+#| label: software
+print(f"Python {platform.python_version()}")
+for mod in (pd, np, matplotlib, yaml):
+    print(f"{mod.__name__} {mod.__version__}")
+```
+
+Analysis tools (Snakemake, bedtools, HOMER, pyBigWig) run in the Pixi `pipeline` environment. Exact versions of every package are recorded in `pixi.lock`.
+
+## References
+
+- ENCODE Project Consortium (2020). Expanded encyclopaedias of DNA elements in the human and mouse genomes. *Nature* 583, 699–710.
+- Heinz S. et al. (2010). Simple combinations of lineage-determining transcription factors prime cis-regulatory elements required for macrophage and B cell identities. *Molecular Cell* 38, 576–589. (HOMER)
+- Quinlan A.R. & Hall I.M. (2010). BEDTools: a flexible suite of utilities for comparing genomic features. *Bioinformatics* 26, 841–842.
+- Mölder F. et al. (2021). Sustainable data analysis with Snakemake. *F1000Research* 10, 33.
+
+
