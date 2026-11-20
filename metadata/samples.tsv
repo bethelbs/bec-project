@@ -1,0 +1,10 @@
+name	assay	target	cell_type	encode_experiment	encode_file	output_type	biological_replicates	is_proxy	path
+bmec_h3k27ac_peaks	ChIP-seq	H3K27ac	brain microvascular endothelial cell	ENCSR111QCU	ENCFF718IQW	pseudoreplicated peaks	1,2	no	data/raw/chip/bmec_h3k27ac_peaks.bed.gz
+bmec_h3k4me3_peaks	ChIP-seq	H3K4me3	brain microvascular endothelial cell	ENCSR000DTC	ENCFF430BFN	pseudoreplicated peaks	1,2	no	data/raw/chip/bmec_h3k4me3_peaks.bed.gz
+bmec_h3k27me3_peaks	ChIP-seq	H3K27me3	brain microvascular endothelial cell	ENCSR032CAS	ENCFF732VIJ	replicated peaks	1,2	no	data/raw/chip/bmec_h3k27me3_peaks.bed.gz
+bmec_h3k36me3_peaks	ChIP-seq	H3K36me3	brain microvascular endothelial cell	ENCSR587VHH	ENCFF784BVN	replicated peaks	1,2	no	data/raw/chip/bmec_h3k36me3_peaks.bed.gz
+bmec_ctcf_peaks	ChIP-seq	CTCF	brain microvascular endothelial cell	ENCSR000DTA	ENCFF985NAQ	IDR thresholded peaks	1,2	no	data/raw/chip/bmec_ctcf_peaks.bed.gz
+huvec_h3k4me1_peaks	ChIP-seq	H3K4me1	endothelial cell of umbilical vein	ENCSR000AKL	ENCFF213BAF	pseudoreplicated peaks	1,2,3	yes	data/raw/chip/huvec_h3k4me1_peaks.bed.gz
+bmec_hic_loops	Hi-C	none	brain microvascular endothelial cell	ENCSR507AHE	ENCFF915TBK	loops	1,2	no	data/raw/hic/bmec_hic_loops.bedpe.gz
+bmec_hic_domains	Hi-C	none	brain microvascular endothelial cell	ENCSR507AHE	ENCFF698ULZ	contact domains	1,2	no	data/raw/hic/bmec_hic_domains.bedpe.gz
+bmec_hic_compartments	Hi-C	none	brain microvascular endothelial cell	ENCSR507AHE	ENCFF245BDA	genome compartments	1,2	no	data/raw/hic/bmec_hic_compartments.bigWig

@@ -1,0 +1,14 @@
+name	url	md5	unpack	dest
+bmec_h3k27ac_peaks	https://www.encodeproject.org/files/ENCFF718IQW/@@download/ENCFF718IQW.bed.gz	8f194fdce0d82dc847aa5303de6ed534	none	data/raw/chip/bmec_h3k27ac_peaks.bed.gz
+bmec_h3k4me3_peaks	https://www.encodeproject.org/files/ENCFF430BFN/@@download/ENCFF430BFN.bed.gz	551fd1d09270c92338f294b2c58e5233	none	data/raw/chip/bmec_h3k4me3_peaks.bed.gz
+bmec_h3k27me3_peaks	https://www.encodeproject.org/files/ENCFF732VIJ/@@download/ENCFF732VIJ.bed.gz	400f2a2c4577a91664d04e71cb092e59	none	data/raw/chip/bmec_h3k27me3_peaks.bed.gz
+bmec_h3k36me3_peaks	https://www.encodeproject.org/files/ENCFF784BVN/@@download/ENCFF784BVN.bed.gz	815eb537049ef81ee0a0c8282212ce09	none	data/raw/chip/bmec_h3k36me3_peaks.bed.gz
+bmec_ctcf_peaks	https://www.encodeproject.org/files/ENCFF985NAQ/@@download/ENCFF985NAQ.bed.gz	f03ab2e6fedc88bc1294d43051a545ec	none	data/raw/chip/bmec_ctcf_peaks.bed.gz
+huvec_h3k4me1_peaks	https://www.encodeproject.org/files/ENCFF213BAF/@@download/ENCFF213BAF.bed.gz	76841c72b18ce7fed59e683e146434a9	none	data/raw/chip/huvec_h3k4me1_peaks.bed.gz
+bmec_hic_loops	https://www.encodeproject.org/files/ENCFF915TBK/@@download/ENCFF915TBK.bedpe.gz	941e83093d8fbae6080fdd2952128bf1	none	data/raw/hic/bmec_hic_loops.bedpe.gz
+bmec_hic_domains	https://www.encodeproject.org/files/ENCFF698ULZ/@@download/ENCFF698ULZ.bedpe.gz	ede656e42a51abd4c8ea1622ff1bef58	none	data/raw/hic/bmec_hic_domains.bedpe.gz
+bmec_hic_compartments	https://www.encodeproject.org/files/ENCFF245BDA/@@download/ENCFF245BDA.bigWig	a67980c6b30a2988401649126de23502	none	data/raw/hic/bmec_hic_compartments.bigWig
+grch38_genome	https://www.encodeproject.org/files/GRCh38_no_alt_analysis_set_GCA_000001405.15/@@download/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta.gz	a08035b6a6e31780e96a34008ff21bd6	none	data/raw/reference/grch38_no_alt_analysis_set.fasta.gz
+grch38_chrom_sizes	https://www.encodeproject.org/files/ENCFF667IGK/@@download/ENCFF667IGK.tsv	9b996e0d2eabf4f49ef31793c11d2f45	none	data/raw/reference/grch38_chrom_sizes.tsv
+grch38_blacklist	https://www.encodeproject.org/files/ENCFF356LFX/@@download/ENCFF356LFX.bed.gz	393688b4f06c9ce26165d47433dd8c37	none	data/raw/reference/grch38_blacklist.bed.gz
+gencode_v29_annotation	https://www.encodeproject.org/files/ENCFF159KBI/@@download/ENCFF159KBI.gtf.gz	71226887dd98dfc1f816010aba66acee	none	data/raw/reference/gencode_v29_annotation.gtf.gz
