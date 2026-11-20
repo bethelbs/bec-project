@@ -1,0 +1,51 @@
+# Settings for the BMEC regulatory-element workflow.
+# Every tunable value used by the analysis lives here; the scripts receive these
+# values from the Snakefile as command-line arguments. Paths are relative to the
+# project root.
+
+samples: metadata/samples.tsv
+
+# Reference files (written by scripts/download_data.py)
+reference:
+  genome_gz: data/raw/reference/grch38_no_alt_analysis_set.fasta.gz
+  chrom_sizes: data/raw/reference/grch38_chrom_sizes.tsv
+  blacklist: data/raw/reference/grch38_blacklist.bed.gz
+  annotation: data/raw/reference/gencode_v29_annotation.gtf.gz
+
+# Chromosomes kept in the analysis (chrY, chrM and unplaced contigs are dropped)
+chromosomes: [chr1, chr2, chr3, chr4, chr5, chr6, chr7, chr8, chr9, chr10,
+              chr11, chr12, chr13, chr14, chr15, chr16, chr17, chr18, chr19,
+              chr20, chr21, chr22, chrX]
+
+# Gene annotation: which GENCODE gene types provide TSSs
+tss:
+  gene_types: [protein_coding]
+
+# Peak cleaning: minimum -log10(q-value) (column 9 of narrowPeak).
+# 0 keeps every peak that passed ENCODE's replicate filtering.
+peaks:
+  min_neglog10_q: 0
+
+# Promoters: H3K4me3 peaks within this distance (bp) of an annotated TSS
+promoters:
+  tss_window: 2500
+
+# Enhancers: H3K27ac peaks farther than promoters.tss_window from any TSS
+enhancers:
+  exclude_h3k4me3: true      # drop H3K27ac peaks that also overlap H3K4me3
+  require_h3k4me1: false     # true = keep only enhancers overlapping the HUVEC H3K4me1 proxy
+
+# Hi-C loops: extra bp added to each side of a loop anchor before overlapping
+loops:
+  anchor_padding: 0
+
+# Known-motif enrichment (HOMER findMotifsGenome.pl) on loop-supported enhancers
+motifs:
+  size: 200                  # bp around each enhancer centre
+  background_size: 10000     # minimum number of random genomic background regions
+  seed: 42                   # fixed seed, so the background (and results) are identical every run
+  threads: 2
+  max_qvalue: 0.05           # HOMER Benjamini q-value cut-off for candidate TFs
+
+# Marker genes: used only as an annotation column, not to select elements
+markers: [SLC2A1, CLDN5, ABCB1, SLC7A5, MFSD2A, TJP1, OCLN]
