@@ -6,7 +6,7 @@
 
 This project asks which regulatory elements define the identity of human brain microvascular endothelial cells (BMEC), and which genes and transcription factors (TFs) those elements connect to. It takes an element-first approach: active promoters and enhancers are catalogued from histone-mark ChIP-seq, enhancers are linked to promoters through Hi-C chromatin loops, and the loop-supported enhancers are searched for enriched TF motifs. Known blood-brain-barrier marker genes are used as a check.
 
- The analysis builds on public ENCODE data; see [Data](#data) for the sources and `reports/bec-report.qmd` for the methods and references.
+There is no publication associated with this project. The analysis builds on public ENCODE data; see [Data](#data) for the sources and `reports/bec-report.qmd` for the methods and references.
 
 ## What is in this repository?
 
